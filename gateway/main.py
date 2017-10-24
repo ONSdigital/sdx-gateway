@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """Run the sdx-gateway service."""
 import configparser
-import jsons
+import json
 import logging
 import os
 
@@ -15,17 +15,12 @@ from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
 from sdc.rabbit.exceptions import QuarantinableError
 
-config = configparser.SafeConfigParser()
-
-if not os.getenv('SDX_DEV_MODE'):
-    config.read('./dev_config.ini')
-else:
-    config.read('dev_config.ini')
+from . import settings
 
 logging.basicConfig(
-    format=config['default']['LOGGING_FORMAT'],
+    format=settings.LOGGING_FORMAT,
     datefmt="%Y-%m-%dT%H:%M:%S",
-    level=config['default']['LOGGING_LEVEL'],
+    level=settings.LOGGING_LEVEL
 )
 
 logger = logging.getLogger('__name__')
@@ -40,12 +35,12 @@ class Bridge:
     def __init__(self):
         """Initialise a Bridge object."""
         self._rabbit_hosts = [
-            config['default']['RABBIT_HOST'],
-            config['default']['RABBIT_HOST2']
+            settings.RABBIT_HOST,
+            settings.RABBIT_HOST2
         ]
-        self._rabbit_port = config['default']['RABBIT_PORT']
-        self._default_user = config['default']['DEFAULT_USER']
-        self._default_pass = config['default']['DEFAULT_PASSWORD']
+        self._rabbit_port = settings.RABBIT_PORT
+        self._default_user = settings.DEFAULT_USER
+        self._default_pass = settings.DEFAULT_PASSWORD
         self._urls = [
             'amqp://{}:{}@{}:{}/%2f'.format(
                 self._default_user,
@@ -61,19 +56,19 @@ class Bridge:
 
         self.publisher = QueuePublisher(
             self._urls,
-            config['default']['COLLECT_QUEUE'],
+            settings.COLLECT_QUEUE,
         )
 
         self.quarantine_publisher = QueuePublisher(
             urls=self._urls,
-            queue=config['default']['QUARANTINE_QUEUE'],
+            queue=settings.QUARANTINE_QUEUE,
         )
 
         self.consumer = MessageConsumer(
             durable_queue=True,
-            exchange=config['default']['RABBIT_EXCHANGE'],
+            exchange=settings.RABBIT_EXCHANGE,
             exchange_type="topic",
-            rabbit_queue=config['default']['EQ_QUEUE'],
+            rabbit_queue=settings.EQ_QUEUE,
             rabbit_urls=self._urls,
             quarantine_publisher=self.quarantine_publisher,
             process=self.process,
@@ -108,12 +103,12 @@ class GetHealth:
 
         # RabbitMQ vars
         self._rabbit_hosts = [
-            config['default']['RABBIT_HOST'],
-            config['default']['RABBIT_HOST2']
+            settings.RABBIT_HOST,
+            settings.RABBIT_HOST2,
         ]
-        self._rabbit_port = config['default']['RABBIT_PORT']
-        self._default_user = config['default']['DEFAULT_USER']
-        self._default_pass = config['default']['DEFAULT_PASSWORD']
+        self._rabbit_port = settings.RABBIT_PORT
+        self._default_user = settings.DEFAULT_USER
+        self._default_pass = settings.DEFAULT_PASSWORD
         self.rabbit_urls = [
             'http://{}:{}@{}:{}/api/healthchecks/node'.format(
                 self._default_user,
@@ -136,12 +131,14 @@ class GetHealth:
         # Carry out an initial check of connection statuses
         self.determine_rabbit_connection_status()
 
+        # Async HTTP Client
+        self.async_client = AsyncHTTPClient()
+
     @tornado.gen.coroutine
     def determine_rabbit_connection_status(self):
         for url in self.rabbit_urls:
             try:
-                response = yield AsyncHTTPClient().fetch(url)
-                self.rabbit_status_callback(response)
+                response = yield self.async_client.fetch(url)
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
                 raise tornado.gen.Return(None)
@@ -149,19 +146,29 @@ class GetHealth:
                 logger.exception("Unknown exception occurred when receiving " +
                                  "rabbit health")
                 raise tornado.gen.Return(None)
+
+            self.rabbit_status_callback(response)
+
         return
 
     def rabbit_status_callback(self, response):
+        """Sets the rabbit_status attribute on this GetHealth object
+        to True if the response passed contains a status of 'ok'. Otherwise
+        sets the attribute to False."""
         self.rabbit_status = False
-        if response:
-            resp = response.body.decode()
-            logger.error(resp)
+        resp = response.body.decode()
+
+        try:
             res = json.loads(resp)
-            status = res.get('status')
-            logger.info("Rabbit MQ health check response {}".format(status))
-            if status == "ok":
-                logger.info('Setting status now')
-                self.rabbit_status = True
+        except json.JSONDecodeError:
+            logger.exception("Rabbit status response does not contain valid JSON.")
+            return
+
+        status = res.get('status')
+        logger.info("Rabbit MQ health check response {}".format(status))
+        if status == "ok":
+            logger.info('Setting status now')
+            self.rabbit_status = True
 
 
 class HealthCheck(web.RequestHandler):
@@ -199,15 +206,16 @@ def main():
         task = GetHealth()
         sched = tornado.ioloop.PeriodicCallback(
             task.determine_rabbit_connection_status,
-            int(config['default']['HEALTHCHECK_DELAY_MS']))
+            int(settings.HEALTHCHECK_DELAY_MS),
+        )
         sched.start()
         logger.info("Scheduled healthcheck started.")
 
         # Carry out an initial healthcheck
         loop = tornado.ioloop.IOLoop.current()
         loop.call_later(
-            int(config['default']['HEALTHCHECK_DELAY_MS']),
-            task.determine_rabbit_connection_status
+            int(settings.HEALTHCHECK_DELAY_MS),
+            task.determine_rabbit_connection_status,
         )
 
         # Run the bridge service
