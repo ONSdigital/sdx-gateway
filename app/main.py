@@ -122,8 +122,6 @@ class GetHealth:
                 15672),
         ]
 
-        logger.info(self.rabbit_urls)
-
         # Application health statuses
         self.rabbit_status = False
         self.app_health = False
@@ -134,8 +132,8 @@ class GetHealth:
     def determine_rabbit_connection_status(self):
         for url in self.rabbit_urls:
             try:
-                logger.exception("Error receiving rabbit health")
-                response = yield self.async_client.fetch(url)
+                logger.exception("Fetching rabbit health")
+                response = yield self.async_client.fetch(self.rabbit_urls[0])
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
                 raise tornado.gen.Return(None)

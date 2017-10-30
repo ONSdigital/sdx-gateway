@@ -1,8 +1,8 @@
 import os
 
-COLLECT_QUEUE = 'collect'
-DEFAULT_USER = os.getenv('SDX_GATEWAY_DEFAULT_USER', 'guest')
-DEFAULT_PASSWORD = os.getenv('SDX_GATEWAY_DEFAULT_PASSWORD', 'guest')
+COLLECT_QUEUE = 'sdx_gateway_collect'
+DEFAULT_USER = os.getenv('SDX_GATEWAY_DEFAULT_USER', 'rabbit')
+DEFAULT_PASSWORD = os.getenv('SDX_GATEWAY_DEFAULT_PASSWORD', 'rabbit')
 QUARANTINE_QUEUE = 'bridge_quarantine'
 RABBIT_EXCHANGE = 'exchange'
 EQ_QUEUE = 'submit_queue'

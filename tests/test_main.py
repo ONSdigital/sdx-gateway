@@ -1,3 +1,6 @@
+from io import StringIO
+import json
+import logging
 import unittest
 from unittest.mock import Mock, MagicMock
 from unittest.mock import patch
@@ -8,16 +11,19 @@ from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
 from sdc.rabbit.exceptions import QuarantinableError
 import tornado
-from tornado.httpclient import AsyncHTTPClient
+from tornado.httpclient import HTTPClient
 from tornado.httpclient import HTTPError
+from tornado.httpclient import HTTPRequest
+from tornado.httpclient import HTTPResponse
 from tornado.testing import AsyncHTTPTestCase
 from tornado.testing import AsyncTestCase
 from tornado.web import Application
 
-from gateway import settings
-from gateway.main import Bridge
-from gateway.main import GetHealth
-from gateway.main import make_app
+from app import main
+from app import settings
+from app.main import Bridge
+from app.main import GetHealth
+from app.main import make_app
 
 
 class TestBridge:
@@ -109,7 +115,7 @@ class TestGetHealth(unittest.TestCase):
         ),
     ]
 
-    def test_gethealth_settings(self):
+    def test_get_health_settings(self):
         assert self.get_health._rabbit_hosts == [
             settings.RABBIT_HOST,
             settings.RABBIT_HOST2,
@@ -119,11 +125,6 @@ class TestGetHealth(unittest.TestCase):
         # assert self._default_user == settings.DEFAULT_USER
         assert self.get_health._default_pass == settings.DEFAULT_PASSWORD
         assert self.get_health.rabbit_urls == self.urls
-
-        with self.assertLogs('__name__', level='INFO') as cm:
-            GetHealth()
-
-        assert str(self.urls) in cm.output[0]
 
     def test_rabbit_status_callback(self):
         assert self.get_health.rabbit_status == False
@@ -172,13 +173,13 @@ class TestGetHealthCoroutines(AsyncTestCase):
             side_effect=HTTPError
         )
 
-        result = yield self.client.determine_rabbit_connection_status()
-        assert result == None
+        result = self.client.determine_rabbit_connection_status()
 
         self.client.rabbit_status_callback = MagicMock()
         self.client.async_client.fetch = MagicMock(
             return_value=self.GoodResponse()
         )
+
         assert self.client.rabbit_status_callback.called_with(self.GoodResponse())
 
         self.client.rabbit_status_callback = MagicMock()
