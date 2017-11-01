@@ -46,4 +46,4 @@ Environment variables available for configuration are listed below:
 | SDX_GATEWAY_DEFAULT_USER     | `rabbit            | RabbitMQ username
 | SDX_GATEWAY_DEFAULT_PASSWORD | `rabbit`           | RabbitMQ password
 | SDX_GATEWAY_RABBIT_HOST      | `0.0.0.0`          | Port to listen on
-| SDX_RABBIT_GATEWAY_HOST2     | `0.0.0.0`          | Port to listen on
+| SDX_GATEWAY_RABBIT_HOST2     | `0.0.0.0`          | Port to listen on
