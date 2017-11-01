@@ -132,7 +132,7 @@ class GetHealth:
     def determine_rabbit_connection_status(self):
         for url in self.rabbit_urls:
             try:
-                logger.exception("Fetching rabbit health")
+                logger.info("Fetching rabbit health")
                 response = yield self.async_client.fetch(self.rabbit_urls[0])
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
