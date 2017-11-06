@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """Run the sdx-gateway service."""
-import configparser
 import json
 import logging
 import os
@@ -133,7 +132,7 @@ class GetHealth:
         for url in self.rabbit_urls:
             try:
                 logger.info("Fetching rabbit health")
-                response = yield self.async_client.fetch(self.rabbit_urls[0])
+                response = yield self.async_client.fetch(url)
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
                 raise tornado.gen.Return(None)
@@ -154,10 +153,10 @@ class GetHealth:
         self.rabbit_status = False
         logger.info("Decoding rabbitmq status")
         resp = response.body.decode()
-
+        print(resp)
         try:
             res = json.loads(resp)
-        except json.JSONDecodeError:
+        except ValueError:
             logger.exception("Rabbit status response does not contain valid JSON.")
             return
 
