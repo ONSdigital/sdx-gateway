@@ -75,7 +75,7 @@ class Bridge:
 
     def process(self, message, tx_id=None):
         try:
-            self.publisher.publish_message(message)
+            self.publisher.publish_message(message, headers={'tx_id': tx_id})
         except PublishMessageError:
             logger.exception('Unsuccesful publish. tx_id={}'.format(tx_id))
             raise QuarantinableError
