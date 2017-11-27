@@ -1,4 +1,8 @@
+import logging
 import os
+
+LOGGING_LEVEL = logging.getLevelName(os.getenv("LOGGING_LEVEL", "DEBUG"))
+LOGGING_FORMAT = "%(asctime)s.%(msecs)06dZ|%(levelname)s: sdx-gateway: %(message)s"
 
 COLLECT_QUEUE = os.getenv('RABBIT_SURVEY_QUEUE', 'sdx_gateway_collect')
 DEFAULT_USER = os.getenv('SDX_GATEWAY_DEFAULT_USER', 'rabbit')
