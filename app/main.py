@@ -14,15 +14,15 @@ from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
 from sdc.rabbit.exceptions import QuarantinableError
 
+import app.settings
+from app import create_and_wrap_logger
 from . import settings
 
-logging.basicConfig(
-    format='%(asctime)s. %(msecs)06dZ | %(levelname)s: %(message)s',
-    datefmt="%Y-%m-%dT%H:%M:%S",
-    level=logging.DEBUG
-)
+logging.basicConfig(format=app.settings.LOGGING_FORMAT,
+                    datefmt="%Y-%m-%dT%H:%M:%S",
+                    level=app.settings.LOGGING_LEVEL)
 
-logger = logging.getLogger('__name__')
+logger = create_and_wrap_logger(__name__)
 
 logging.getLogger('sdc.rabbit').setLevel(logging.DEBUG)
 logging.getLogger('pika').setLevel(logging.ERROR)
@@ -220,7 +220,7 @@ def main():
     except KeyboardInterrupt:
         logger.info("Shutdown signal received. Stopping application.")
         bridge.stop()
-        logger.info("ApplicatiSOon stopped.")
+        logger.info("Application stopped.")
 
 
 if __name__ == "__main__":
