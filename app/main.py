@@ -12,7 +12,7 @@ from tornado.httpclient import AsyncHTTPClient, HTTPError
 from sdc.rabbit import MessageConsumer
 from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
-from sdc.rabbit.exceptions import QuarantinableError
+from sdc.rabbit.exceptions import RetryableError
 
 import app.settings
 from app import create_and_wrap_logger
@@ -78,7 +78,12 @@ class Bridge:
             self.publisher.publish_message(message, headers={'tx_id': tx_id})
         except PublishMessageError:
             logger.exception('Unsuccesful publish. tx_id={}'.format(tx_id))
-            raise QuarantinableError
+            raise RetryableError
+        except:
+            logger.exception(
+                'Unknown exception occurred during publish. Retrying. tx_id={}'.format(tx_id)
+            )
+            raise RetryableError
 
     def run(self):
         """Run this object's MessageConsumer. Stops on KeyboardInterrupt."""
