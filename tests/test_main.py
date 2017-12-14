@@ -9,6 +9,7 @@ import pytest
 from sdc.rabbit import MessageConsumer
 from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
+from sdc.rabbit.exceptions import RetryableError
 from sdc.rabbit.exceptions import QuarantinableError
 import tornado
 from tornado.httpclient import HTTPClient
@@ -79,7 +80,7 @@ class TestBridge:
     def test_bridge_process_raises_quarantinable_error(self, mock_publisher):
         """Test the process method of the Bridge class."""
         mock_publisher.side_effect = PublishMessageError
-        with pytest.raises(QuarantinableError):
+        with pytest.raises(RetryableError):
             self.bridge.process("message", tx_id=None)
 
     def test_consumer_run_method_called(self):
