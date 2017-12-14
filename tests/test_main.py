@@ -83,6 +83,10 @@ class TestBridge:
         with pytest.raises(RetryableError):
             self.bridge.process("message", tx_id=None)
 
+        mock_publisher.side_effect = Exception
+        with pytest.raises(RetryableError):
+            self.bridge.process("message", tx_id=None)
+
     def test_consumer_run_method_called(self):
         """Test that the run method of the MessageConsumer is called."""
         b = Bridge()
