@@ -1,4 +1,6 @@
 ## Unreleased
+
+## 1.1.0 2017-12-15
 - Upgrade rabbit library
 - Raise RetryableError during process if an exception occurs
 
