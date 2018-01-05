@@ -45,12 +45,12 @@ class Bridge:
                 self._default_user,
                 self._default_pass,
                 self._rabbit_hosts[0],
-                self._rabbit_port),
+                self._rabbit_port) + settings.HEARTBEAT_INTERVAL,
             'amqp://{}:{}@{}:{}/%2f'.format(
                 self._default_user,
                 self._default_pass,
                 self._rabbit_hosts[1],
-                self._rabbit_port),
+                self._rabbit_port) + settings.HEARTBEAT_INTERVAL,
         ]
 
         self.publisher = QueuePublisher(

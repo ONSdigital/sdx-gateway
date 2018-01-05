@@ -36,12 +36,12 @@ class TestBridge:
             settings.DEFAULT_USER,
             settings.DEFAULT_PASSWORD,
             settings.RABBIT_HOST,
-            settings.RABBIT_PORT),
+            settings.RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
         'amqp://{}:{}@{}:{}/%2f'.format(
             settings.DEFAULT_USER,
             settings.DEFAULT_PASSWORD,
             settings.RABBIT_HOST2,
-            settings.RABBIT_PORT),
+            settings.RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
     ]
 
     def test_bridge_settings(self):
