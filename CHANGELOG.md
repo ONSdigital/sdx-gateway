@@ -1,5 +1,8 @@
 ## Unreleased
 
+## 1.2.0 2018-01-17
+- Add heartbeat interval to rabbit mq url
+
 ## 1.1.0 2017-12-15
 - Upgrade rabbit library
 - Raise RetryableError during process if an exception occurs

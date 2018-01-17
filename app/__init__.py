@@ -2,7 +2,7 @@ import logging
 
 from structlog import wrap_logger
 
-__version__ = '1.1.0'
+__version__ = '1.2.0'
 
 
 def create_and_wrap_logger(logger_name):
