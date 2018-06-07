@@ -43,7 +43,7 @@ Environment variables available for configuration are listed below:
 | Environment Variable         | Default            | Description
 |------------------------------|--------------------|----------------
 | PORT                         | `5000`             | Port to listen on
-| SDX_GATEWAY_DEFAULT_USER     | `rabbit            | RabbitMQ username
+| SDX_GATEWAY_DEFAULT_USER     | `rabbit`           | RabbitMQ username
 | SDX_GATEWAY_DEFAULT_PASSWORD | `rabbit`           | RabbitMQ password
 | SDX_GATEWAY_RABBIT_HOST      | `0.0.0.0`          | Port to listen on
 | SDX_GATEWAY_RABBIT_HOST2     | `0.0.0.0`          | Port to listen on
