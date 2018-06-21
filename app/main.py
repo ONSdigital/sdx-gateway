@@ -44,7 +44,7 @@ class Bridge:
         self._sdx_queue_port = settings.SDX_GATEWAY_SDX_RABBITMQ_PORT
         self._sdx_queue_user = settings.SDX_GATEWAY_SDX_RABBITMQ_USER
         self._sdx_queue_password = settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD
-        self._sdx_queue_host = settings.SDX_GATEWAY_EQ_RABBITMQ_HOST
+        self._sdx_queue_host = settings.SDX_GATEWAY_SDX_RABBITMQ_HOST
 
         self._eq_queue_urls = [
             'amqp://{}:{}@{}:{}/%2f'.format(
