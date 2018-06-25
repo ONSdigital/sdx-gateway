@@ -1,4 +1,5 @@
 ## Unreleased
+- Move SDX queues from EQ cluster to AWS corp
 
 ## 1.2.0 2018-01-17
 - Add heartbeat interval to rabbit mq url
