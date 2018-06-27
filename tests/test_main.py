@@ -1,6 +1,3 @@
-from io import StringIO
-import json
-import logging
 import unittest
 from unittest.mock import Mock, MagicMock
 from unittest.mock import patch
@@ -10,17 +7,15 @@ from sdc.rabbit import MessageConsumer
 from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
 from sdc.rabbit.exceptions import RetryableError
-from sdc.rabbit.exceptions import QuarantinableError
+
 import tornado
-from tornado.httpclient import HTTPClient
+
 from tornado.httpclient import HTTPError
-from tornado.httpclient import HTTPRequest
-from tornado.httpclient import HTTPResponse
+
 from tornado.testing import AsyncHTTPTestCase
 from tornado.testing import AsyncTestCase
 from tornado.web import Application
 
-from app import main
 from app import settings
 from app.main import Bridge
 from app.main import GetHealth
@@ -31,17 +26,25 @@ class TestBridge:
     """Tests for the Bridge class."""
     bridge = Bridge()
 
-    urls = [
+    eq_queue_urls = [
         'amqp://{}:{}@{}:{}/%2f'.format(
-            settings.DEFAULT_USER,
-            settings.DEFAULT_PASSWORD,
-            settings.RABBIT_HOST,
-            settings.RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_USER,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
+            settings.SDX_GATEWAY_EQ_RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
         'amqp://{}:{}@{}:{}/%2f'.format(
-            settings.DEFAULT_USER,
-            settings.DEFAULT_PASSWORD,
-            settings.RABBIT_HOST2,
-            settings.RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_USER,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
+            settings.SDX_GATEWAY_EQ_RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
+    ]
+
+    sdx_queue_url = [
+        'amqp://{}:{}@{}:{}/%2f'.format(
+            settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
+            settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
+            settings.SDX_GATEWAY_SDX_RABBITMQ_HOST,
+            settings.SDX_GATEWAY_SDX_RABBITMQ_PORT)
     ]
 
     def test_bridge_settings(self):
@@ -49,30 +52,35 @@ class TestBridge:
            correct attributes from the settings module."""
 
         #  Rabbit settings
-        assert self.bridge._rabbit_hosts == [
-            settings.RABBIT_HOST,
-            settings.RABBIT_HOST2,
+        assert self.bridge._eq_queue_hosts == [
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ]
-        assert self.bridge._rabbit_port == settings.RABBIT_PORT
-        assert self.bridge._default_user == settings.DEFAULT_USER
-        assert self.bridge._default_pass == settings.DEFAULT_PASSWORD
-        assert self.bridge._urls == self.urls
+        assert self.bridge._eq_queue_port == settings.SDX_GATEWAY_EQ_RABBIT_PORT
+        assert self.bridge._eq_queue_user == settings.SDX_GATEWAY_EQ_RABBITMQ_USER
+        assert self.bridge._eq_queue_password == settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
+        assert self.bridge._eq_queue_urls == self.eq_queue_urls
+
+        assert self.bridge._sdx_queue_port == settings.SDX_GATEWAY_SDX_RABBITMQ_PORT
+        assert self.bridge._sdx_queue_user == settings.SDX_GATEWAY_SDX_RABBITMQ_USER
+        assert self.bridge._sdx_queue_password == settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD
+        assert self.bridge._sdx_queue_url == self.sdx_queue_url
 
         #  Publisher settings
         assert isinstance(self.bridge.publisher, QueuePublisher)
-        assert self.bridge.publisher._urls == self.urls
+        assert self.bridge.publisher._urls == self.sdx_queue_url
         assert self.bridge.publisher._queue == settings.COLLECT_QUEUE
 
         #  Quarantine publisher settings
         assert isinstance(self.bridge.quarantine_publisher, QueuePublisher)
-        assert self.bridge.quarantine_publisher._urls == self.urls
+        assert self.bridge.quarantine_publisher._urls == self.sdx_queue_url
         assert self.bridge.quarantine_publisher._queue == settings.QUARANTINE_QUEUE
 
         #  Consumer settings
         assert isinstance(self.bridge.consumer, MessageConsumer)
         assert self.bridge.consumer._exchange == settings.RABBIT_EXCHANGE
         assert self.bridge.consumer._queue == settings.EQ_QUEUE
-        assert self.bridge.consumer._rabbit_urls == self.urls
+        assert self.bridge.consumer._rabbit_urls == self.eq_queue_urls
         assert self.bridge.consumer.quarantine_publisher is self.bridge.quarantine_publisher
         assert self.bridge.consumer.process.__self__ == self.bridge.process.__self__
 
@@ -109,26 +117,25 @@ class TestGetHealth(unittest.TestCase):
 
     urls = [
         'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-            settings.DEFAULT_USER,
-            settings.DEFAULT_PASSWORD,
-            settings.RABBIT_HOST,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_USER,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
         ),
         'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-            settings.DEFAULT_USER,
-            settings.DEFAULT_PASSWORD,
-            settings.RABBIT_HOST2,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_USER,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ),
     ]
 
     def test_get_health_settings(self):
         assert self.get_health._rabbit_hosts == [
-            settings.RABBIT_HOST,
-            settings.RABBIT_HOST2,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ]
 
-        assert self.get_health._rabbit_port == settings.RABBIT_PORT
-        # assert self._default_user == settings.DEFAULT_USER
-        assert self.get_health._default_pass == settings.DEFAULT_PASSWORD
+        assert self.get_health._rabbit_port == settings.SDX_GATEWAY_EQ_RABBIT_PORT
+        assert self.get_health._default_pass == settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
         assert self.get_health.rabbit_urls == self.urls
 
     def test_rabbit_status_callback(self):
@@ -146,13 +153,13 @@ class TestGetHealth(unittest.TestCase):
         class BadResponse:
             body = b'{"status": "not ok"}'
 
-        assert None == self.get_health.rabbit_status_callback(NotJSONResponse())
+        assert None if self.get_health.rabbit_status_callback(NotJSONResponse()) else not None
 
         self.get_health.rabbit_status_callback(BadResponse())
-        assert self.get_health.rabbit_status == False
+        assert False if self.get_health.rabbit_status else True
 
         self.get_health.rabbit_status_callback(GoodResponse())
-        assert self.get_health.rabbit_status == True
+        assert True if self.get_health.rabbit_status else False
 
     def test_make_app(self):
         app = make_app()
@@ -162,9 +169,10 @@ class TestGetHealth(unittest.TestCase):
 class TestGetHealthCoroutines(AsyncTestCase):
     """Test the GetHealth determine_rabbit_connection_status coroutine."""
 
+    client = GetHealth()
+
     def setUp(self):
         super().setUp()
-        self.client = GetHealth()
 
     class GoodResponse:
         body = b'{"status": "ok"}'
@@ -177,8 +185,6 @@ class TestGetHealthCoroutines(AsyncTestCase):
         self.client.async_client.fetch = MagicMock(
             side_effect=HTTPError
         )
-
-        result = self.client.determine_rabbit_connection_status()
 
         self.client.rabbit_status_callback = MagicMock()
         self.client.async_client.fetch = MagicMock(
@@ -199,8 +205,9 @@ class TestHealthCheckApp(AsyncHTTPTestCase):
     _healthcheck = '/healthcheck'
     _http_success_code = 200
 
+    registration_handler = Mock()
+
     def setUp(self):
-        self._registration_handler = Mock()
         AsyncHTTPTestCase.setUp(self)
 
     def get_app(self):

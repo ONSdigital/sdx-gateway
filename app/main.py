@@ -33,33 +33,47 @@ class Bridge:
 
     def __init__(self):
         """Initialise a Bridge object."""
-        self._rabbit_hosts = [
-            settings.RABBIT_HOST,
-            settings.RABBIT_HOST2
+        self._eq_queue_hosts = [
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2
         ]
-        self._rabbit_port = settings.RABBIT_PORT
-        self._default_user = settings.DEFAULT_USER
-        self._default_pass = settings.DEFAULT_PASSWORD
-        self._urls = [
+        self._eq_queue_port = settings.SDX_GATEWAY_EQ_RABBIT_PORT
+        self._eq_queue_user = settings.SDX_GATEWAY_EQ_RABBITMQ_USER
+        self._eq_queue_password = settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
+
+        self._sdx_queue_port = settings.SDX_GATEWAY_SDX_RABBITMQ_PORT
+        self._sdx_queue_user = settings.SDX_GATEWAY_SDX_RABBITMQ_USER
+        self._sdx_queue_password = settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD
+        self._sdx_queue_host = settings.SDX_GATEWAY_SDX_RABBITMQ_HOST
+
+        self._eq_queue_urls = [
             'amqp://{}:{}@{}:{}/%2f'.format(
-                self._default_user,
-                self._default_pass,
-                self._rabbit_hosts[0],
-                self._rabbit_port) + settings.HEARTBEAT_INTERVAL,
+                self._eq_queue_user,
+                self._eq_queue_password,
+                self._eq_queue_hosts[0],
+                self._eq_queue_port) + settings.HEARTBEAT_INTERVAL,
             'amqp://{}:{}@{}:{}/%2f'.format(
-                self._default_user,
-                self._default_pass,
-                self._rabbit_hosts[1],
-                self._rabbit_port) + settings.HEARTBEAT_INTERVAL,
+                self._eq_queue_user,
+                self._eq_queue_password,
+                self._eq_queue_hosts[1],
+                self._eq_queue_port) + settings.HEARTBEAT_INTERVAL,
+        ]
+        
+        self._sdx_queue_url = [
+            'amqp://{}:{}@{}:{}/%2f'.format(
+                self._sdx_queue_user,
+                self._sdx_queue_password,
+                self._sdx_queue_host,
+                self._sdx_queue_port)
         ]
 
         self.publisher = QueuePublisher(
-            self._urls,
+            self._sdx_queue_url,
             settings.COLLECT_QUEUE,
         )
 
         self.quarantine_publisher = QueuePublisher(
-            urls=self._urls,
+            urls=self._sdx_queue_url,
             queue=settings.QUARANTINE_QUEUE,
         )
 
@@ -68,7 +82,7 @@ class Bridge:
             exchange=settings.RABBIT_EXCHANGE,
             exchange_type="topic",
             rabbit_queue=settings.EQ_QUEUE,
-            rabbit_urls=self._urls,
+            rabbit_urls=self._eq_queue_urls,
             quarantine_publisher=self.quarantine_publisher,
             process=self.process,
         )
@@ -77,7 +91,7 @@ class Bridge:
         try:
             self.publisher.publish_message(message, headers={'tx_id': tx_id})
         except PublishMessageError:
-            logger.exception('Unsuccesful publish. tx_id={}'.format(tx_id))
+            logger.exception('Unsuccessful publish. tx_id={}'.format(tx_id))
             raise RetryableError
         except:
             logger.exception(
@@ -107,12 +121,12 @@ class GetHealth:
 
         # RabbitMQ vars
         self._rabbit_hosts = [
-            settings.RABBIT_HOST,
-            settings.RABBIT_HOST2,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
+            settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ]
-        self._rabbit_port = settings.RABBIT_PORT
-        self._default_user = settings.DEFAULT_USER
-        self._default_pass = settings.DEFAULT_PASSWORD
+        self._rabbit_port = settings.SDX_GATEWAY_EQ_RABBIT_PORT
+        self._default_user = settings.SDX_GATEWAY_EQ_RABBITMQ_USER
+        self._default_pass = settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
         self.rabbit_urls = [
             'http://{}:{}@{}:{}/api/healthchecks/node'.format(
                 self._default_user,
@@ -201,6 +215,7 @@ def main():
     server = tornado.httpserver.HTTPServer(app)
     server.bind(int(os.getenv("SDX_GATEWAY_PORT", '8080')))
     server.start(1)
+    bridge = Bridge()
 
     try:
         # Create the scheduled healthcheck
@@ -220,7 +235,6 @@ def main():
         )
 
         # Run the bridge service
-        bridge = Bridge()
         bridge.run()
     except KeyboardInterrupt:
         logger.info("Shutdown signal received. Stopping application.")
