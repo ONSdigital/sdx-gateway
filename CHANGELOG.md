@@ -1,5 +1,7 @@
 ## Unreleased
 
+- Updated the dockerfile to remove apt-get
+
 ## 1.3.0 2018-06-27
 - Move SDX queues from EQ cluster to AWS corp
 
