@@ -1,5 +1,6 @@
 ## Unreleased
-
+- Remove python 3.4 and 3.5 from travis builds
+- Add python 3.7 to travis builds
 - Updated the dockerfile to remove apt-get
 
 ## 1.3.0 2018-06-27
