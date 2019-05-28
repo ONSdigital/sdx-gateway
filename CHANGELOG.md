@@ -1,5 +1,5 @@
 ## Unreleased
-
+- Exposing port 8087 for docker
 - Updated the dockerfile to remove apt-get
 
 ## 1.3.0 2018-06-27
