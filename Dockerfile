@@ -9,4 +9,6 @@ RUN make build
 
 WORKDIR app
 
+EXPOSE 8087
+
 ENTRYPOINT python3 -m app.main
