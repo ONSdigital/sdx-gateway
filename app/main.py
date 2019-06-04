@@ -213,7 +213,7 @@ def main():
 
     app = make_app()
     server = tornado.httpserver.HTTPServer(app)
-    server.bind(int(os.getenv("SDX_GATEWAY_PORT", '8080')))
+    server.bind(int(os.getenv("SDX_GATEWAY_PORT", '8087')))
     server.start(1)
     bridge = Bridge()
 
