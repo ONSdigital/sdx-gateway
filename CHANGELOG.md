@@ -1,4 +1,6 @@
 ## Unreleased
+
+## 1.4.0 2019-06-18
 - Remove python 3.4 and 3.5 from travis builds
 - Add python 3.7 to travis builds
 - Upgrade sdc-rabbit, tornado and pika packages
