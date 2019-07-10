@@ -11,7 +11,7 @@ WORKDIR app
 
 EXPOSE 8087
 
-HEALTHCHECK --interval=1m --timeout=5s --retries=3 \
+HEALTHCHECK --interval=1m30s --timeout=10s --retries=3 \
   CMD curl -f http://localhost:8087/healthcheck || exit 1
 
 ENTRYPOINT python3 -m app.main
