@@ -111,13 +111,13 @@ class TestGetHealth(unittest.TestCase):
 
     urls = [
         'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-            settings.SDX_GATEWAY_EQ_RABBITMQ_MONITORING_USER,
-            settings.SDX_GATEWAY_EQ_RABBITMQ_MONITORING_PASSWORD,
+            settings.EQ_RABBITMQ_MONITORING_USER,
+            settings.EQ_RABBITMQ_MONITORING_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
         ),
         'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-            settings.SDX_GATEWAY_EQ_RABBITMQ_MONITORING_USER,
-            settings.SDX_GATEWAY_EQ_RABBITMQ_MONITORING_PASSWORD,
+            settings.EQ_RABBITMQ_MONITORING_USER,
+            settings.EQ_RABBITMQ_MONITORING_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ),
         'http://{}:{}@{}:15672/api/healthchecks/node'.format(
@@ -134,8 +134,8 @@ class TestGetHealth(unittest.TestCase):
         ]
 
         assert self.get_health._rabbit_port == settings.SDX_GATEWAY_EQ_RABBIT_PORT
-        assert self.get_health._monitoring_user == settings.SDX_GATEWAY_EQ_RABBITMQ_MONITORING_USER
-        assert self.get_health._monitoring_pass == settings.SDX_GATEWAY_EQ_RABBITMQ_MONITORING_PASSWORD
+        assert self.get_health._monitoring_user == settings.EQ_RABBITMQ_MONITORING_USER
+        assert self.get_health._monitoring_pass == settings.EQ_RABBITMQ_MONITORING_PASSWORD
         assert self.get_health.rabbit_urls == self.urls
 
     def test_rabbit_status_callback(self):
