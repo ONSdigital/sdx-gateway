@@ -120,11 +120,6 @@ class TestGetHealth(unittest.TestCase):
             settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ),
-        'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-            settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_HOST,
-        ),
     ]
 
     def test_get_health_settings(self):
