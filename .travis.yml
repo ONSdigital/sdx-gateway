@@ -8,8 +8,5 @@ before_install:
     - pip install --upgrade pip
 install:
     - make build
-    - pip install codecov
 script:
     - make test
-after_success:
-    - codecov

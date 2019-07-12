@@ -1,4 +1,5 @@
 ## Unreleased
+- Fixed rabbit healthcheck tornado task
 
 ## 1.4.0 2019-06-18
 - Remove python 3.4 and 3.5 from travis builds

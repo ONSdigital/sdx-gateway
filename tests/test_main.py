@@ -7,13 +7,7 @@ from sdc.rabbit import MessageConsumer
 from sdc.rabbit import QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError
 from sdc.rabbit.exceptions import RetryableError
-
-import tornado
-
-from tornado.httpclient import HTTPError
-
 from tornado.testing import AsyncHTTPTestCase
-from tornado.testing import AsyncTestCase
 from tornado.web import Application
 
 from app import settings
@@ -31,12 +25,12 @@ class TestBridge:
             settings.SDX_GATEWAY_EQ_RABBITMQ_USER,
             settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
-            settings.SDX_GATEWAY_EQ_RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
+            settings.SDX_GATEWAY_EQ_RABBIT_PORT),
         'amqp://{}:{}@{}:{}/%2f'.format(
             settings.SDX_GATEWAY_EQ_RABBITMQ_USER,
             settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
-            settings.SDX_GATEWAY_EQ_RABBIT_PORT) + settings.HEARTBEAT_INTERVAL,
+            settings.SDX_GATEWAY_EQ_RABBIT_PORT),
     ]
 
     sdx_queue_url = [
@@ -126,6 +120,11 @@ class TestGetHealth(unittest.TestCase):
             settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ),
+        'http://{}:{}@{}:15672/api/healthchecks/node'.format(
+            settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
+            settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
+            settings.SDX_GATEWAY_SDX_RABBITMQ_HOST,
+        ),
     ]
 
     def test_get_health_settings(self):
@@ -139,10 +138,7 @@ class TestGetHealth(unittest.TestCase):
         assert self.get_health.rabbit_urls == self.urls
 
     def test_rabbit_status_callback(self):
-        assert self.get_health.rabbit_status == False
-
-        with self.assertRaises(TypeError):
-            self.get_health.rabbit_status_callback()
+        """Tests for the rabbit_status_callback function."""
 
         class NotJSONResponse:
             body = b'not json'
@@ -153,52 +149,21 @@ class TestGetHealth(unittest.TestCase):
         class BadResponse:
             body = b'{"status": "not ok"}'
 
-        assert None if self.get_health.rabbit_status_callback(NotJSONResponse()) else not None
+        with self.assertLogs(level='INFO') as cm:
+            self.get_health.rabbit_status_callback(NotJSONResponse())
+            self.assertIn('Rabbit status response does not contain valid JSON.', cm.output[-1])
 
-        self.get_health.rabbit_status_callback(BadResponse())
-        assert False if self.get_health.rabbit_status else True
+        with self.assertLogs(level='INFO') as cm:
+            self.get_health.rabbit_status_callback(BadResponse())
+            self.assertIn('Rabbit MQ health check response status=not ok', cm.output[-1])
 
-        self.get_health.rabbit_status_callback(GoodResponse())
-        assert True if self.get_health.rabbit_status else False
+        with self.assertLogs(level='INFO') as cm:
+            self.get_health.rabbit_status_callback(GoodResponse())
+            self.assertIn('Rabbit MQ health check response status=ok', cm.output[-1])
 
     def test_make_app(self):
         app = make_app()
         assert isinstance(app, Application)
-
-
-class TestGetHealthCoroutines(AsyncTestCase):
-    """Test the GetHealth determine_rabbit_connection_status coroutine."""
-
-    client = GetHealth()
-
-    def setUp(self):
-        super().setUp()
-
-    class GoodResponse:
-        body = b'{"status": "ok"}'
-
-    class BadResponse:
-        body = b'{"status": "not ok"}'
-
-    @tornado.testing.gen_test
-    def test_connection_status_raises_http_error(self):
-        self.client.async_client.fetch = MagicMock(
-            side_effect=HTTPError
-        )
-
-        self.client.rabbit_status_callback = MagicMock()
-        self.client.async_client.fetch = MagicMock(
-            return_value=self.GoodResponse()
-        )
-
-        assert self.client.rabbit_status_callback.called_with(self.GoodResponse())
-
-        self.client.rabbit_status_callback = MagicMock()
-        self.client.async_client.fetch = MagicMock(
-            return_value=self.BadResponse()
-        )
-        assert self.client.rabbit_status_callback.called_with(self.BadResponse())
-
 
 class TestHealthCheckApp(AsyncHTTPTestCase):
     """Use tornado AsyncHTTPTestCase to test the HealthCheck application."""
@@ -214,8 +179,6 @@ class TestHealthCheckApp(AsyncHTTPTestCase):
         return make_app()
 
     def test_healthcheck_endpoint(self):
-        self.http_client.fetch(self.get_url(self._healthcheck),
-                               self.stop)
-        response = self.wait()
+        response = self.fetch(self.get_url(self._healthcheck))
         self.assertEqual(self._http_success_code, response.code)
         self.assertEqual(b'{"status": "ok"}', response.body)

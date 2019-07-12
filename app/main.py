@@ -6,26 +6,22 @@ import logging
 import os
 
 import tornado
-from tornado import web
+from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 
-from sdc.rabbit import MessageConsumer
-from sdc.rabbit import QueuePublisher
-from sdc.rabbit.exceptions import PublishMessageError
-from sdc.rabbit.exceptions import RetryableError
+from sdc.rabbit import MessageConsumer, QueuePublisher
+from sdc.rabbit.exceptions import PublishMessageError, RetryableError
 
-import app.settings
 from app import create_and_wrap_logger
 from . import settings
 
-logging.basicConfig(format=app.settings.LOGGING_FORMAT,
+logging.basicConfig(format=settings.LOGGING_FORMAT,
                     datefmt="%Y-%m-%dT%H:%M:%S",
-                    level=app.settings.LOGGING_LEVEL)
+                    level=settings.LOGGING_LEVEL)
 
 logger = create_and_wrap_logger(__name__)
 
 logging.getLogger('sdc.rabbit').setLevel(logging.DEBUG)
-logging.getLogger('pika').setLevel(logging.ERROR)
 
 
 class Bridge:
@@ -51,12 +47,12 @@ class Bridge:
                 self._eq_queue_user,
                 self._eq_queue_password,
                 self._eq_queue_hosts[0],
-                self._eq_queue_port) + settings.HEARTBEAT_INTERVAL,
+                self._eq_queue_port),
             'amqp://{}:{}@{}:{}/%2f'.format(
                 self._eq_queue_user,
                 self._eq_queue_password,
                 self._eq_queue_hosts[1],
-                self._eq_queue_port) + settings.HEARTBEAT_INTERVAL,
+                self._eq_queue_port),
         ]
         
         self._sdx_queue_url = [
@@ -91,12 +87,10 @@ class Bridge:
         try:
             self.publisher.publish_message(message, headers={'tx_id': tx_id})
         except PublishMessageError:
-            logger.exception('Unsuccessful publish. tx_id={}'.format(tx_id))
+            logger.exception('Unsuccessful publish.', tx_id=tx_id)
             raise RetryableError
         except:
-            logger.exception(
-                'Unknown exception occurred during publish. Retrying. tx_id={}'.format(tx_id)
-            )
+            logger.exception('Unknown exception occurred during publish. Retrying.', tx_id=tx_id)
             raise RetryableError
 
     def run(self):
@@ -117,7 +111,7 @@ class GetHealth:
        the app status."""
 
     def __init__(self):
-        """Initialise a Bridge object."""
+        """Initialise a GetHealth object."""
 
         # RabbitMQ vars
         self._rabbit_hosts = [
@@ -128,70 +122,55 @@ class GetHealth:
         self._default_user = settings.SDX_GATEWAY_EQ_RABBITMQ_USER
         self._default_pass = settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
         self.rabbit_urls = [
-            'http://{}:{}@{}:{}/api/healthchecks/node'.format(
+            'http://{}:{}@{}:15672/api/healthchecks/node'.format(
                 self._default_user,
                 self._default_pass,
-                self._rabbit_hosts[0],
-                15672),
-            'http://{}:{}@{}:{}/api/healthchecks/node'.format(
+                self._rabbit_hosts[0]),
+            'http://{}:{}@{}:15672/api/healthchecks/node'.format(
                 self._default_user,
                 self._default_pass,
-                self._rabbit_hosts[1],
-                15672),
+                self._rabbit_hosts[1]),
+            'http://{}:{}@{}:15672/api/healthchecks/node'.format(
+                settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
+                settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
+                settings.SDX_GATEWAY_SDX_RABBITMQ_HOST),
         ]
 
-        # Application health statuses
-        self.rabbit_status = False
-        self.app_health = False
-
-        # Async HTTP Client
-        self.async_client = AsyncHTTPClient()
-
+    @gen.coroutine
     def determine_rabbit_connection_status(self):
+        logger.info("Starting to check rabbit health")
         for url in self.rabbit_urls:
             try:
                 logger.info("Fetching rabbit health")
-                response = yield self.async_client.fetch(url)
+                response = yield AsyncHTTPClient().fetch(url)
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
                 raise tornado.gen.Return(None)
             except Exception:
-                logger.exception("Unknown exception occurred when receiving " +
-                                 "rabbit health")
+                logger.exception("Unknown exception occurred when receiving rabbit health")
                 raise tornado.gen.Return(None)
 
-            logger.error("Setting rabbit status")
             self.rabbit_status_callback(response)
 
+        logger.info("Finished checking rabbit health")
         return
 
     def rabbit_status_callback(self, response):
-        """Sets the rabbit_status attribute on this GetHealth object
-        to True if the response passed contains a status of 'ok'. Otherwise
-        sets the attribute to False."""
-        self.rabbit_status = False
+        """Logs the status of the rabbit connection as ok or not ok."""
         logger.info("Decoding rabbitmq status")
         resp = response.body.decode()
-        print(resp)
         try:
             res = json.loads(resp)
         except ValueError:
             logger.exception("Rabbit status response does not contain valid JSON.")
             return
 
-        status = res.get('status')
-        logger.info("Rabbit MQ health check response {}".format(status))
-        if status == "ok":
-            logger.info('Setting status now')
-            self.rabbit_status = True
+        logger.info("Rabbit MQ health check response", status=res.get('status'))
 
 
 class HealthCheck(web.RequestHandler):
     """Returns a http response with a JSON body of {"status": "ok"}
        if this service is running."""
-
-    def initialize(self):
-        self.set_health = GetHealth()
 
     def get(self):
         """Writes `{"status": "ok"}` to the output buffer and sets
@@ -222,7 +201,7 @@ def main():
         task = GetHealth()
         sched = tornado.ioloop.PeriodicCallback(
             task.determine_rabbit_connection_status,
-            int(settings.HEALTHCHECK_DELAY_MS),
+            int(settings.RABBITMQ_HEALTHCHECK_DELAY_MS),
         )
         sched.start()
         logger.info("Scheduled healthcheck started.")
@@ -230,7 +209,7 @@ def main():
         # Carry out an initial healthcheck
         loop = tornado.ioloop.IOLoop.current()
         loop.call_later(
-            int(settings.HEALTHCHECK_DELAY_MS),
+            int(settings.RABBITMQ_HEALTHCHECK_DELAY_MS),
             task.determine_rabbit_connection_status,
         )
 
