@@ -6,14 +6,11 @@ import logging
 import os
 
 import tornado
-from tornado import gen
-from tornado import web
+from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 
-from sdc.rabbit import MessageConsumer
-from sdc.rabbit import QueuePublisher
-from sdc.rabbit.exceptions import PublishMessageError
-from sdc.rabbit.exceptions import RetryableError
+from sdc.rabbit import MessageConsumer, QueuePublisher
+from sdc.rabbit.exceptions import PublishMessageError, RetryableError
 
 from app import create_and_wrap_logger
 from . import settings
