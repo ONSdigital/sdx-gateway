@@ -130,6 +130,10 @@ class GetHealth:
                 self._default_user,
                 self._default_pass,
                 self._rabbit_hosts[1]),
+            'http://{}:{}@{}:15672/api/healthchecks/node'.format(
+                settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
+                settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
+                settings.SDX_GATEWAY_SDX_RABBITMQ_HOST),
         ]
 
     @gen.coroutine
@@ -137,7 +141,7 @@ class GetHealth:
         logger.info("Starting to check rabbit health")
         for url in self.rabbit_urls:
             try:
-                logger.info("Fetching rabbit health")
+                logger.info("Fetching rabbit health", url=url)
                 response = yield AsyncHTTPClient().fetch(url)
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
