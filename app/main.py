@@ -119,16 +119,16 @@ class GetHealth:
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
         ]
         self._rabbit_port = settings.SDX_GATEWAY_EQ_RABBIT_PORT
-        self._default_user = settings.SDX_GATEWAY_EQ_RABBITMQ_USER
-        self._default_pass = settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
+        self._monitoring_user = settings.EQ_RABBITMQ_MONITORING_USER
+        self._monitoring_pass = settings.EQ_RABBITMQ_MONITORING_PASSWORD
         self.rabbit_urls = [
             'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-                self._default_user,
-                self._default_pass,
+                self._monitoring_user,
+                self._monitoring_pass,
                 self._rabbit_hosts[0]),
             'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-                self._default_user,
-                self._default_pass,
+                self._monitoring_user,
+                self._monitoring_pass,
                 self._rabbit_hosts[1]),
             'http://{}:{}@{}:15672/api/healthchecks/node'.format(
                 settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
