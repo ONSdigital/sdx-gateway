@@ -1,4 +1,6 @@
 ## Unreleased
+
+## 1.5.0 2019-08-1
 - Fixed rabbit healthcheck tornado task
 
 ## 1.4.0 2019-06-18
