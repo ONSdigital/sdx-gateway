@@ -1,4 +1,5 @@
 ## Unreleased
+- Update sdc-rabbit to version 1.7.0 to fix reconnect issues
 
 ## 1.5.0 2019-08-1
 - Fixed rabbit healthcheck tornado task
