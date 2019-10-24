@@ -1,4 +1,5 @@
 ## Unreleased
+- Add python 3.8 to travis builds
 
 ## 1.6.0 2019-09-04
 - Update sdc-rabbit to version 1.7.0 to fix reconnect issues
