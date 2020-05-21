@@ -1,4 +1,6 @@
 ## Unreleased
+
+## 1.6.2 2020-05-21
 - Updated packages
 
 ## 1.6.1 2019-11-08
