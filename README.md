@@ -5,30 +5,38 @@
 The sdx-gateway app is used within the Office National of Statistics (ONS) as a gatekeeper service between SDX and EQ. It binds to an upstream RabbitMQ queue, and passes any messages to a downstream queue. Stopping this service keeps submissions on the EQ queues for the duration of the gateway's downtime, which is useful when carrying out production deployments.
 
 ## Installation
+This application presently installs required packages from requirements files:
+- `requirements.txt`: packages for the application, with hashes for all packages: see https://pypi.org/project/hashin/
+- `test-requirements.txt`: packages for testing and linting
 
-*It is recommended that this service is installed inside a virtualenv.*
+It's also best to use `pyenv` and `pyenv-virtualenv`, to build in a virtual environment with the currently recommended version of Python.  To install these, see:
+- https://github.com/pyenv/pyenv
+- https://github.com/pyenv/pyenv-virtualenv
+- (Note that the homebrew version of `pyenv` is easiest to install, but can lag behind the latest release of Python.)
 
-To install, use:
-
-```bash
-make build
+### Getting started
+Once your virtual environment is set, install the requirements:
+```shell
+$ make build
 ```
 
-To run the test suite, use:
-
-```bash
-make test
+To test, first run `make build` as above, then run:
+```shell
+$ make test
 ```
 
-It's also possible to build sdx-gateway within a container using docker. From the sdx-gateway directory:
-
-    $ docker build -t sdx-gateway .
+It's also possible to install within a container using docker. From the sdx-downstream directory:
+```shell
+$ docker build -t sdx-downstream .
+```
 
 ## Usage
 
 To start sdx-gateway service locally, use the following command:
 
-    python server.py
+```shell
+$ python server.py
+```
 
 If you've built the image under docker, you can start using the following:
 
