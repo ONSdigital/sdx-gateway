@@ -1,4 +1,5 @@
 ## Unreleased
+- add openapi.yml
 
 ## 1.6.2 2020-05-21
 - Updated packages

@@ -1,0 +1,26 @@
+openapi: 3.0.2
+
+info:
+  title: sdx-gateway
+  description: A service that acts as the gatekeeper between SDX and EQ.
+  version: "1.6.2"
+
+servers:
+  - url: http://localhost:8087/
+
+paths:
+  /healthcheck:
+    get:
+      summary: Healthcheck.
+      description: Simple endpoint that reports the health of the application.
+      responses:
+        200:
+          description: Healthcheck retrieved successfully.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "ok"
