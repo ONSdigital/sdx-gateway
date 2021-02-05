@@ -1,6 +1,6 @@
 # sdx-gateway
 
-[![Build Status](https://github.com/ONSdigital/sdx-transform-cs/workflows/Build/badge.svg)](https://github.com/ONSdigital/sdx-transform-cs) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/0d8f1899b0054322b9d0ec8f2bd62d86)](https://www.codacy.com/app/ons-sdc/sdx-gateway?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ONSdigital/sdx-gateway&amp;utm_campaign=Badge_Grade) [![codecov](https://codecov.io/gh/ONSdigital/sdx-gateway/branch/master/graph/badge.svg)](https://codecov.io/gh/ONSdigital/sdx-gateway)
+[![Build Status](https://github.com/ONSdigital/sdx-gateway/workflows/Build/badge.svg)](https://github.com/ONSdigital/sdx-gateway) [![Codacy Badge](https://api.codacy.com/project/badge/Grade/0d8f1899b0054322b9d0ec8f2bd62d86)](https://www.codacy.com/app/ons-sdc/sdx-gateway?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=ONSdigital/sdx-gateway&amp;utm_campaign=Badge_Grade) [![codecov](https://codecov.io/gh/ONSdigital/sdx-gateway/branch/master/graph/badge.svg)](https://codecov.io/gh/ONSdigital/sdx-gateway)
 
 The sdx-gateway app is used within the Office National of Statistics (ONS) as a gatekeeper service between SDX and EQ. It binds to an upstream RabbitMQ queue, and passes any messages to a downstream queue. Stopping this service keeps submissions on the EQ queues for the duration of the gateway's downtime, which is useful when carrying out production deployments.
 
