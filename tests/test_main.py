@@ -33,14 +33,6 @@ class TestBridge:
             settings.SDX_GATEWAY_EQ_RABBIT_PORT),
     ]
 
-    sdx_queue_url = [
-        'amqp://{}:{}@{}:{}/%2f'.format(
-            settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_HOST,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_PORT)
-    ]
-
     def test_bridge_settings(self):
         """Test that the Bridge class is instantiating objects using the
            correct attributes from the settings module."""
@@ -54,21 +46,6 @@ class TestBridge:
         assert self.bridge._eq_queue_user == settings.SDX_GATEWAY_EQ_RABBITMQ_USER
         assert self.bridge._eq_queue_password == settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
         assert self.bridge._eq_queue_urls == self.eq_queue_urls
-
-        assert self.bridge._sdx_queue_port == settings.SDX_GATEWAY_SDX_RABBITMQ_PORT
-        assert self.bridge._sdx_queue_user == settings.SDX_GATEWAY_SDX_RABBITMQ_USER
-        assert self.bridge._sdx_queue_password == settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD
-        assert self.bridge._sdx_queue_url == self.sdx_queue_url
-
-        #  Publisher settings
-        assert isinstance(self.bridge.publisher, QueuePublisher)
-        assert self.bridge.publisher._urls == self.sdx_queue_url
-        assert self.bridge.publisher._queue == settings.COLLECT_QUEUE
-
-        #  Quarantine publisher settings
-        assert isinstance(self.bridge.quarantine_publisher, QueuePublisher)
-        assert self.bridge.quarantine_publisher._urls == self.sdx_queue_url
-        assert self.bridge.quarantine_publisher._queue == settings.QUARANTINE_QUEUE
 
         #  Consumer settings
         assert isinstance(self.bridge.consumer, MessageConsumer)
@@ -119,12 +96,7 @@ class TestGetHealth(unittest.TestCase):
             settings.EQ_RABBITMQ_MONITORING_USER,
             settings.EQ_RABBITMQ_MONITORING_PASSWORD,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2,
-        ),
-        'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-            settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
-            settings.SDX_GATEWAY_SDX_RABBITMQ_HOST,
-        ),
+        )
     ]
 
     def test_get_health_settings(self):

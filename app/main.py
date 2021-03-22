@@ -1,27 +1,21 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
-"""Run the sdx-gateway service."""
 import json
-import logging
 import os
 
+import structlog
 import tornado
 from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 
+from google.cloud import pubsub_v1
+
 from sdc.rabbit import MessageConsumer, QueuePublisher
 from sdc.rabbit.exceptions import PublishMessageError, RetryableError
 
-from app import create_and_wrap_logger
+from app.settings import PROJECT_ID, SURVEY_TOPIC
 from . import settings
+from .quarantine import PubSubQuarantine
 
-logging.basicConfig(format=settings.LOGGING_FORMAT,
-                    datefmt="%Y-%m-%dT%H:%M:%S",
-                    level=settings.LOGGING_LEVEL)
-
-logger = create_and_wrap_logger(__name__)
-
-logging.getLogger('sdc.rabbit').setLevel(logging.DEBUG)
+logger = structlog.get_logger()
 
 
 class Bridge:
@@ -37,10 +31,8 @@ class Bridge:
         self._eq_queue_user = settings.SDX_GATEWAY_EQ_RABBITMQ_USER
         self._eq_queue_password = settings.SDX_GATEWAY_EQ_RABBITMQ_PASSWORD
 
-        self._sdx_queue_port = settings.SDX_GATEWAY_SDX_RABBITMQ_PORT
-        self._sdx_queue_user = settings.SDX_GATEWAY_SDX_RABBITMQ_USER
-        self._sdx_queue_password = settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD
-        self._sdx_queue_host = settings.SDX_GATEWAY_SDX_RABBITMQ_HOST
+        self._sdx_publisher = pubsub_v1.PublisherClient()
+        self._topic_path = self._sdx_publisher.topic_path(PROJECT_ID, SURVEY_TOPIC)
 
         self._eq_queue_urls = [
             'amqp://{}:{}@{}:{}/%2f'.format(
@@ -54,24 +46,8 @@ class Bridge:
                 self._eq_queue_hosts[1],
                 self._eq_queue_port),
         ]
-        
-        self._sdx_queue_url = [
-            'amqp://{}:{}@{}:{}/%2f'.format(
-                self._sdx_queue_user,
-                self._sdx_queue_password,
-                self._sdx_queue_host,
-                self._sdx_queue_port)
-        ]
 
-        self.publisher = QueuePublisher(
-            self._sdx_queue_url,
-            settings.COLLECT_QUEUE,
-        )
-
-        self.quarantine_publisher = QueuePublisher(
-            urls=self._sdx_queue_url,
-            queue=settings.QUARANTINE_QUEUE,
-        )
+        self.quarantine_publisher = PubSubQuarantine()
 
         self.consumer = MessageConsumer(
             durable_queue=True,
@@ -85,7 +61,10 @@ class Bridge:
 
     def process(self, message, tx_id=None):
         try:
-            self.publisher.publish_message(message, headers={'tx_id': tx_id})
+            logger.info(f"Publishing data to pubsub with tx_id: {tx_id}")
+            data = message.encode("utf-8")
+            future = self._sdx_publisher.publish(self._topic_path, data, tx_id=tx_id)
+            logger.info(future.result())
         except PublishMessageError:
             logger.exception('Unsuccessful publish.', tx_id=tx_id)
             raise RetryableError
@@ -130,10 +109,6 @@ class GetHealth:
                 self._monitoring_user,
                 self._monitoring_pass,
                 self._rabbit_hosts[1]),
-            'http://{}:{}@{}:15672/api/healthchecks/node'.format(
-                settings.SDX_GATEWAY_SDX_RABBITMQ_USER,
-                settings.SDX_GATEWAY_SDX_RABBITMQ_PASSWORD,
-                settings.SDX_GATEWAY_SDX_RABBITMQ_HOST),
         ]
 
     @gen.coroutine
@@ -188,7 +163,7 @@ def make_app():
 
 def main():
     """Run the Bridge application."""
-    logger.info("Starting SDX Bridge service.")
+    logger.info("Starting sdx-gateway")
 
     app = make_app()
     server = tornado.httpserver.HTTPServer(app)
@@ -219,7 +194,3 @@ def main():
         logger.info("Shutdown signal received. Stopping application.")
         bridge.stop()
         logger.info("Application stopped.")
-
-
-if __name__ == "__main__":
-    main()
