@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sdx-gateway
+  labels:
+    app: sdx-gateway
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sdx-gateway
+  template:
+    metadata:
+      labels:
+        app: sdx-gateway
+    spec:
+      containers:
+      - image: eu.gcr.io/{{ .Values.registry_location }}/sdx-gateway:{{ .Chart.AppVersion }}
+        imagePullPolicy: Always
+        name: sdx-gateway
+        env:
+        - name: PROJECT_ID
+          valueFrom:
+            configMapKeyRef:
+              name: config
+              key: project_id
+      serviceAccountName: sdx-workload-identity
