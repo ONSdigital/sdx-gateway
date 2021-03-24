@@ -7,6 +7,13 @@ logger = structlog.get_logger()
 
 
 class PubSubQuarantine:
+    """Writes to a pubsub topic.
+
+    Objects of this class can be used in place of sdc.rabbit.QueuePublisher
+    for the quarantine_publisher parameter when creating an instance of
+    sdc.rabbit.MessageConsumer. This will allow the MessageConsumer to be used
+    with pubsub instead of rabbitmq.
+    """
 
     def __init__(self,):
         self._publisher = pubsub_v1.PublisherClient()

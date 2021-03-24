@@ -2,14 +2,15 @@ import json
 import os
 
 import structlog
+from structlog.contextvars import bind_contextvars, clear_contextvars, unbind_contextvars
 import tornado
 from tornado import gen, web
 from tornado.httpclient import AsyncHTTPClient, HTTPError
 
 from google.cloud import pubsub_v1
 
-from sdc.rabbit import MessageConsumer, QueuePublisher
-from sdc.rabbit.exceptions import PublishMessageError, RetryableError
+from sdc.rabbit import MessageConsumer
+from sdc.rabbit.exceptions import QuarantinableError
 
 from app.settings import PROJECT_ID, SURVEY_TOPIC
 from . import settings
@@ -22,7 +23,6 @@ class Bridge:
     """A Bridge object that takes from one queue and publishes to another."""
 
     def __init__(self):
-        """Initialise a Bridge object."""
         self._eq_queue_hosts = [
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST,
             settings.SDX_GATEWAY_EQ_RABBITMQ_HOST2
@@ -61,16 +61,16 @@ class Bridge:
 
     def process(self, message, tx_id=None):
         try:
-            logger.info(f"Publishing data to pubsub with tx_id: {tx_id}")
+            bind_contextvars(tx_id=tx_id)
+            logger.info("Publishing data to pubsub")
             data = message.encode("utf-8")
             future = self._sdx_publisher.publish(self._topic_path, data, tx_id=tx_id)
             logger.info(future.result())
-        except PublishMessageError:
-            logger.exception('Unsuccessful publish.', tx_id=tx_id)
-            raise RetryableError
-        except:
-            logger.exception('Unknown exception occurred during publish. Retrying.', tx_id=tx_id)
-            raise RetryableError
+        except Exception as e:
+            logger.exception(str(e))
+            raise QuarantinableError()
+        finally:
+            unbind_contextvars('tx_id')
 
     def run(self):
         """Run this object's MessageConsumer. Stops on KeyboardInterrupt."""
@@ -113,10 +113,10 @@ class GetHealth:
 
     @gen.coroutine
     def determine_rabbit_connection_status(self):
-        logger.info("Starting to check rabbit health")
+        logger.debug("Starting to check rabbit health")
         for url in self.rabbit_urls:
             try:
-                logger.info("Fetching rabbit health")
+                logger.debug("Fetching rabbit health")
                 response = yield AsyncHTTPClient().fetch(url)
             except HTTPError:
                 logger.exception("Error receiving rabbit health")
@@ -127,12 +127,12 @@ class GetHealth:
 
             self.rabbit_status_callback(response)
 
-        logger.info("Finished checking rabbit health")
+        logger.debug("Finished checking rabbit health")
         return
 
     def rabbit_status_callback(self, response):
         """Logs the status of the rabbit connection as ok or not ok."""
-        logger.info("Decoding rabbitmq status")
+        logger.debug("Decoding rabbitmq status")
         resp = response.body.decode()
         try:
             res = json.loads(resp)
@@ -163,7 +163,8 @@ def make_app():
 
 def main():
     """Run the Bridge application."""
-    logger.info("Starting sdx-gateway")
+    bind_contextvars(app="SDX-gateway")
+    logger.info("Starting")
 
     app = make_app()
     server = tornado.httpserver.HTTPServer(app)
@@ -194,3 +195,4 @@ def main():
         logger.info("Shutdown signal received. Stopping application.")
         bridge.stop()
         logger.info("Application stopped.")
+        clear_contextvars()

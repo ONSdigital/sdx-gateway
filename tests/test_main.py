@@ -11,9 +11,9 @@ from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application
 
 from app import settings
-from app.main import Bridge
-from app.main import GetHealth
-from app.main import make_app
+from app.gateway import Bridge
+from app.gateway import GetHealth
+from app.gateway import make_app
 
 
 class TestBridge:
