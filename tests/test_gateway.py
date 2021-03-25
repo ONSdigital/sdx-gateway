@@ -5,7 +5,7 @@ from unittest.mock import patch
 import pytest
 from sdc.rabbit import MessageConsumer
 from sdc.rabbit import QueuePublisher
-from sdc.rabbit.exceptions import PublishMessageError
+from sdc.rabbit.exceptions import PublishMessageError, QuarantinableError
 from sdc.rabbit.exceptions import RetryableError
 from tornado.testing import AsyncHTTPTestCase
 from tornado.web import Application
@@ -59,11 +59,11 @@ class TestBridge:
     def test_bridge_process_raises_quarantinable_error(self, mock_publisher):
         """Test the process method of the Bridge class."""
         mock_publisher.side_effect = PublishMessageError
-        with pytest.raises(RetryableError):
+        with pytest.raises(QuarantinableError):
             self.bridge.process("message", tx_id=None)
 
         mock_publisher.side_effect = Exception
-        with pytest.raises(RetryableError):
+        with pytest.raises(QuarantinableError):
             self.bridge.process("message", tx_id=None)
 
     def test_consumer_run_method_called(self):
@@ -122,21 +122,22 @@ class TestGetHealth(unittest.TestCase):
         class BadResponse:
             body = b'{"status": "not ok"}'
 
-        with self.assertLogs(level='INFO') as cm:
+        with self.assertLogs(level='DEBUG') as cm:
             self.get_health.rabbit_status_callback(NotJSONResponse())
             self.assertIn('Rabbit status response does not contain valid JSON.', cm.output[-1])
 
-        with self.assertLogs(level='INFO') as cm:
+        with self.assertLogs(level='ERROR') as cm:
             self.get_health.rabbit_status_callback(BadResponse())
-            self.assertIn('Rabbit MQ health check response status=not ok', cm.output[-1])
+            self.assertIn('Rabbit MQ health check response not ok', cm.output[-1])
 
-        with self.assertLogs(level='INFO') as cm:
+        with self.assertLogs(level='DEBUG') as cm:
             self.get_health.rabbit_status_callback(GoodResponse())
-            self.assertIn('Rabbit MQ health check response status=ok', cm.output[-1])
+            self.assertIn('Rabbit MQ health check response ok', cm.output[-1])
 
     def test_make_app(self):
         app = make_app()
         assert isinstance(app, Application)
+
 
 class TestHealthCheckApp(AsyncHTTPTestCase):
     """Use tornado AsyncHTTPTestCase to test the HealthCheck application."""

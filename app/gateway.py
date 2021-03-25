@@ -136,11 +136,14 @@ class GetHealth:
         resp = response.body.decode()
         try:
             res = json.loads(resp)
-        except ValueError:
-            logger.exception("Rabbit status response does not contain valid JSON.")
-            return
+            if res.get("status") == "not ok":
+                logger.error("Rabbit MQ health check response not ok")
+            else:
+                logger.debug("Rabbit MQ health check response ok")
 
-        logger.info("Rabbit MQ health check response", status=res.get('status'))
+        except ValueError:
+            logger.error("Rabbit status response does not contain valid JSON.")
+            return
 
 
 class HealthCheck(web.RequestHandler):
